@@ -41,6 +41,7 @@ while not quit:
                         pic_done = pic_done + 1
 
                 if pic_done > 10:
+                        pic_done = 10
                         GPIO.output(readyPin, GPIO.HIGH)
 
                 time.sleep(0.5)
