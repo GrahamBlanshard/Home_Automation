@@ -35,6 +35,7 @@ while not quit:
                 if GPIO.input(rPin):
 			pic_delay += 1
                         GPIO.output(readyPin, GPIO.LOW)
+<<<<<<< HEAD
 			if pic_delay > TIME_DELAY:
                         	GPIO.output(writingPin, GPIO.HIGH)
                         	camera.capture('image.jpg')
@@ -44,6 +45,17 @@ while not quit:
 
               	if not GPIO.input(rPin): 
 			pic_delay = 0
+=======
+                        GPIO.output(writingPin, GPIO.HIGH)
+                        camera.capture('image.jpg')
+                        print "Pic captured!"
+                        GPIO.output(writingPin,GPIO.LOW)
+                else:
+                        pic_done = pic_done + 1
+
+                if pic_done > 10:
+                        pic_done = 10
+>>>>>>> origin/master
                         GPIO.output(readyPin, GPIO.HIGH)
 
                 time.sleep(0.5)
