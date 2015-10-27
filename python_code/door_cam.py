@@ -1,4 +1,5 @@
-# Waits for a signal from the magnetic door switch then snaps a picture
+# Captures a picture every 3 seconds while the door is in an "Open" state
+#
 # LED Support:
 # Green LED on BCM pin 23 signals when it is ready for a new pic
 # Red LED on BCM pin 18 signals when a pic is saving
@@ -19,7 +20,8 @@ quit = False
 camera = picamera.PiCamera()
 camera.vflip = True
 
-pic_done = 5
+pic_delay = 0
+TIME_DELAY = 6
 
 #RPi GPIO Setup
 GPIO.setwarnings(False)
@@ -30,17 +32,18 @@ GPIO.setup(writingPin, GPIO.OUT)
 
 while not quit:
         try:
-                if not GPIO.input(rPin) and pic_done > 5:
-                        pic_done = 0
+                if GPIO.input(rPin):
+			pic_delay += 1
                         GPIO.output(readyPin, GPIO.LOW)
-                        GPIO.output(writingPin, GPIO.HIGH)
-                        camera.capture('image.jpg')
-                        print "Pic captured!"
-                        GPIO.output(writingPin,GPIO.LOW)
-                else:
-                        pic_done = pic_done + 1
+			if pic_delay > TIME_DELAY:
+                        	GPIO.output(writingPin, GPIO.HIGH)
+                        	camera.capture('image.jpg')
+                        	print "Pic captured! " + time.ctime()
+                        	GPIO.output(writingPin,GPIO.LOW)
+				pic_delay = 0
 
-                if pic_done > 10:
+              	if not GPIO.input(rPin): 
+			pic_delay = 0
                         GPIO.output(readyPin, GPIO.HIGH)
 
                 time.sleep(0.5)
