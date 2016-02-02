@@ -76,7 +76,7 @@ def door_signal(who):
 ##################
 @app.route('/signal/<code>/<who>')
 def status(code, who):
-	if code == DOOR_CMDs:
+	if code == DOOR_CMD:
 		door_signal(who) 
 		return 'Done'
 	else:
