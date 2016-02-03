@@ -78,6 +78,7 @@ def makepicdir(savepath):
 #######
 # RUN #
 #######
+dbEvent('DoorReader','Starting')
 while not QUIT:
     try:
     #Man Door - Pin Status
@@ -114,8 +115,9 @@ while not QUIT:
     #Finish
         time.sleep(LOOP_DELAY)
     except KeyboardInterrupt:
-        QUIT = True
-			
+	QUIT = true
+
+dbEvent('DoorReader','Stopping')
 conn.close()
 GPIO.cleanup()
 camera.close()
