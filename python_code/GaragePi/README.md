@@ -1,9 +1,9 @@
 GaragePi
 =====
 
-##Python Libraries
-`flask` - for web api
-`pytz` - for timezones
+##Python Libraries  
+`flask` - for web api  
+`pytz` - for timezones  
 `pynma` - [Python NotifyMyAndroid](https://github.com/uskr/pynma) : For push notifications of particular events
 
 ##Wiring: 
@@ -13,8 +13,8 @@ GaragePi
 17 - Garage Door Relay
 
 ###Inputs
-24 - Man Door Sensor (Wired through Normally Open Contact)
-25 - Garage Door Sensor (Wired through Normally Open Contact)
+24 - Man Door Sensor (Wired through Normally Open Contact)  
+25 - Garage Door Sensor (Wired through Normally Open Contact)  
 
 5V Power & Ground supplied where necessary
 
