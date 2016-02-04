@@ -19,17 +19,18 @@ from time import sleep
 # VARIABLES #
 #############
 RELAY_PIN = 17 #Teal Wire
+<<<<<<< HEAD
 DOOR_CMD = "CmdGoesHere"
+=======
+DOOR_CMD = "CmdGoesHere" #No External Access, Firewall blocked. Future placeholder for security potentials
+VALID_EVENTS = ['ManDoor','GarageDoor','WebListener','DoorReader','Graham','Steph']
+>>>>>>> origin/master
 
 ##########
 # CONFIG #
 ##########
 #Flask
 app = Flask(__name__)
-
-#SQL
-conn=sqlite3.connect('db/garage.db')
-curs=conn.cursor()
 
 #RaspberryPi Setup
 GPIO.setwarnings(False)
@@ -41,6 +42,7 @@ GPIO.setup(RELAY_PIN, GPIO.OUT)
 #############
 def dbEvent(eSource, eName):
     "Store an event in the database"
+<<<<<<< HEAD
     values = (eSource,eName)
     curs.execute('INSERT INTO events (source,name) VALUES (?,?)', values)
     conn.commit()
@@ -59,6 +61,38 @@ def dbSelect(eSource):
 	return 'Error %s:' % e.args[0]
 
 
+=======
+    try:
+        conn=sqlite3.connect('db/garage.db')
+        curs=conn.cursor()
+
+        values = (eSource,eName)
+        curs.execute('INSERT INTO events (source,name) VALUES (?,?)', values)
+        conn.commit()
+        conn.close()
+    except sqlite3.Error, e:
+        print 'Error on Insert: %s' % e.args[0]
+
+    return
+
+
+def dbSelect(eSource):
+    "Execute SELECT statement on database given source name"
+    try:
+	conn=sqlite3.connect('db/garage.db')
+        curs=conn.cursor()
+
+        curs.execute('SELECT source,name,etime FROM events WHERE source=\'%s\' ORDER BY ID DESC LIMIT 1' % eSource)
+        data = curs.fetchone()
+        if data == None:
+            return 'No %s events to report' % eSource
+        else:
+            return data[0] + ' last state = `' + data[1] + '` at ' + data[2]
+	conn.close()
+    except sqlite3.Error, e:
+	return 'Error %s:' % e.args[0]
+
+>>>>>>> origin/master
 def door_status():
     "Retreive statuses for both doors"
     try:
@@ -95,7 +129,14 @@ def status_plain():
 @app.route('/query/<source>')
 def query_status(source):
     "Query the database for the latest event on given source"
+<<<<<<< HEAD
     return dbSelect(source) 
+=======
+    if source in VALID_EVENTS:
+        return dbSelect(source) 
+    else:
+        return 'Invalid Event Request'
+>>>>>>> origin/master
 
 ########
 # MAIN #
@@ -108,5 +149,8 @@ if __name__ == '__main__':
 
     dbEvent('WebListener','Stopping')
     GPIO.cleanup()
+<<<<<<< HEAD
     if conn:
         conn.close()
+=======
+>>>>>>> origin/master

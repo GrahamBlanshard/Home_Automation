@@ -41,7 +41,11 @@ manNotified = False
 garageNotified = False
 NMA_DELAY_SEC = 300     #5 minutes
 NMA_LATE_START = 0      #Midnight	
+<<<<<<< HEAD
 NMA_LATE_END = 5        #5AM
+=======
+NMA_LATE_END = 6        #6AM
+>>>>>>> origin/master
 
 manDoorState = None     #None = closed, time = open
 garageDoorState = None  #None = closed, time = open
@@ -64,6 +68,9 @@ camera.hflip = True
 camera.resolution = (1366,768)
 camera.quality = 100
 camera.exposure_mode = 'sports'
+
+#PyNMA Setup
+nma = pynma.PyNMA(NMA_API_KEY)
 
 #PyNMA Setup
 nma = pynma.PyNMA(NMA_API_KEY)
@@ -156,7 +163,10 @@ while not QUIT:
 
             else:
                 #Send Notify if over limit
+<<<<<<< HEAD
                 currTime = now()
+=======
+>>>>>>> origin/master
                 delta = currTime - garageDoorState
                 if delta.total_seconds() > NMA_DELAY_SEC and not garageNotified:
                     sendAndroidNotify('Garage Door Left Open','Garage Door has been left open!',1)
