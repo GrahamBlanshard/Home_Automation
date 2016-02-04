@@ -31,7 +31,7 @@ Extra warnings that are configured are sent directly to the phone through the No
 - Either door being opened after midnight and before 6AM
 
 ###web_listener.py
-In v1.0 this application has two commands: `signal` and `status` which both listen on the all IPs, port 5000 (default).
+In valid commands: `signal`,`status`,`query` all listen on port 5000 (default).
 
 * signal - used to signal the door relay to actuate for 500ms
 * status - queries the sqlite database for the most recent event for either door
