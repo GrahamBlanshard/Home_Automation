@@ -40,12 +40,8 @@ NMA_API_KEY = "SuperTopSecret" #Your NMA API key goes here!
 manNotified = False
 garageNotified = False
 NMA_DELAY_SEC = 300     #5 minutes
-NMA_LATE_START = 0      #Midnight	
-<<<<<<< HEAD
+NMA_LATE_START = 0      #Midnight
 NMA_LATE_END = 5        #5AM
-=======
-NMA_LATE_END = 6        #6AM
->>>>>>> origin/master
 
 manDoorState = None     #None = closed, time = open
 garageDoorState = None  #None = closed, time = open
@@ -163,10 +159,7 @@ while not QUIT:
 
             else:
                 #Send Notify if over limit
-<<<<<<< HEAD
                 currTime = now()
-=======
->>>>>>> origin/master
                 delta = currTime - garageDoorState
                 if delta.total_seconds() > NMA_DELAY_SEC and not garageNotified:
                     sendAndroidNotify('Garage Door Left Open','Garage Door has been left open!',1)
