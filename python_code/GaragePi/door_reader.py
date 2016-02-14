@@ -48,7 +48,7 @@ NMA_API_KEY = "SuperTopSecret"
 manNotified = False
 garageNotified = False
 NMA_DELAY_SEC = 300     #5 minutes
-NMA_LATE_START = 0      #Midnight	
+NMA_LATE_START = 0      #Midnight
 NMA_LATE_END = 5        #5AM
 
 manDoorState = None     #None = closed, time = open
