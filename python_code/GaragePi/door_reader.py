@@ -12,6 +12,10 @@
 #    pytz :  `sudo pip install pytz`
 #    pynma : (https://github.com/uskr/pynma)
 ##
+# Latest Revision
+# Feb. 14, 2016 : Attempted loop fix
+#               : Print update to help debugs
+##
 
 import sqlite3
 import RPi.GPIO as GPIO
@@ -35,21 +39,21 @@ GARAGE_DOOR_PIN = 25    #Blue Wire
 LOOP_DELAY = 1          #sec
 QUIT = False
 
+DEBUG_FILE = '/home/pi/garage/debug.pi'
+DB_PATH = '/home/pi/garage/db/garage.db'
+LOG_FILE = open('/home/pi/garage/logs/door_reader.log', 'w+')
+
 #NotifyMyAndroid Setup
 NMA_API_KEY = "SuperTopSecret" #Your NMA API key goes here!
 manNotified = False
 garageNotified = False
 NMA_DELAY_SEC = 300     #5 minutes
-NMA_LATE_START = 0      #Midnight
+NMA_LATE_START = 0      #Midnight	
 NMA_LATE_END = 5        #5AM
 
 manDoorState = None     #None = closed, time = open
 garageDoorState = None  #None = closed, time = open
 savepicdir = './pics/'
-
-#Database Setup
-conn=sqlite3.connect('db/garage.db')
-curs=conn.cursor()
 
 #RaspberryPi Setup
 GPIO.setwarnings(False)
@@ -68,12 +72,15 @@ camera.exposure_mode = 'sports'
 #PyNMA Setup
 nma = pynma.PyNMA(NMA_API_KEY)
 
-#PyNMA Setup
-nma = pynma.PyNMA(NMA_API_KEY)
-
 #############
 # FUNCTIONS #
 #############
+def debug_print(msg):
+    "Tests for Debug mode file and prints a message to LOG_FILE if present"
+    if os.path.isfile(DEBUG_FILE):
+        LOG_FILE.write( msg + '\n' )
+        LOG_FILE.flush()
+
 def now():
     "Get current datetime with America/Regina timezone"
     return datetime.datetime.now(pytz.timezone('America/Regina'))
@@ -81,22 +88,22 @@ def now():
 def dbEvent(eSource, eName):
     "Store an event in the database"
     try:
-        conn=sqlite3.connect('db/garage.db')
+        conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
-
         values = (eSource,eName)
         curs.execute('INSERT INTO events (source,name) VALUES (?,?)', values)
-        conn.commit()
-        conn.close()
     except sqlite3.Error, e:
-        print 'Error on Insert: %s' % e.args[0]
+        LOG_FILE.write( 'Error on Insert: %s' % e.args[0] )
 
+    conn.commit()
+    conn.close()
+    debug_print('%s %s event stored in database' % (eSource, eName))
     return
 
 def readableDate(start,end):
     "Returns a readable string of time"
     time_delta = end - start
-    return str(time_delta.total_seconds()) + ' seconds'
+    return '{:.0f} seconds'.format(time_delta.total_seconds())
 
 def makepicdir(savepath):
     "Tests and creates the picture directory"
@@ -104,6 +111,7 @@ def makepicdir(savepath):
         os.stat(savepath)
     except:
         os.mkdir(savepath)
+    return
 
 def sendAndroidNotify(event,desc,priority):
     "Send a message to Android"
@@ -115,70 +123,76 @@ def sendAndroidNotify(event,desc,priority):
 #######
 dbEvent('DoorReader','Starting')
 while not QUIT:
+    debug_print('Loop Iteration')
     try:
     #Man Door - Pin Status
-        if GPIO.input(MAN_DOOR_PIN):
+        if GPIO.input(MAN_DOOR_PIN): #Open Door
             if manDoorState is None:
                 dbEvent('ManDoor','Open')
                 manDoorState = now()
             
-                #Test time, if its too late warn me!
+                #Test time, if its too late warn me with NMA!
                 if manDoorState.hour >= NMA_LATE_START and manDoorState.hour <= NMA_LATE_END:
                     sendAndroidNotify('Man Door Opened','Your garage has been opened late!',2)
-                print 'Man Door open'
-            else:
-		currTime = now()
+
+            else: #Door Open for >1 iteration
+                currTime = now()
+                debug_print('ManDoor still open')
+
+                #Each iteration this door is open, take a picture
                 savedir = savepicdir + "%04d%02d%02d/" % (currTime.year, currTime.month, currTime.day)
                 savefilename = savedir + 'garage-' + "%02d%02d%02d.jpg" % (currTime.hour, currTime.minute, currTime.second)
                 makepicdir(savedir)
                 camera.capture(savefilename)
                 
-                #Send Notify if over limit
+                #Send Notify Message if over time limit
                 delta = currTime - manDoorState
                 if delta.total_seconds() > NMA_DELAY_SEC and not manNotified:
                     sendAndroidNotify('Man Door Left Open','Man Door has been left open!',1)
                     manNotified = True
-        else:
-            manNotified = False
+
+        else: #Door close state
             if not manDoorState is None:
                 delta_time = readableDate(manDoorState, now())
                 dbEvent('ManDoor','Close ' + delta_time )
-                manDoorState = None
-                print 'Man Door Closed'
+            manDoorState = None
+            manNotified = False
             
     #Garage Door - Pin Status
-        if GPIO.input(GARAGE_DOOR_PIN):
+        if GPIO.input(GARAGE_DOOR_PIN): #Door Open
             if garageDoorState is None:
                 dbEvent('GarageDoor','Open')	
                 garageDoorState = now() 
-                print 'Garage Door Open'
 
                 #Test time, if its too late warn me!
                 if garageDoorState.hour >= NMA_LATE_START and garageDoorState.hour <= NMA_LATE_END:
                     sendAndroidNotify('Garage Door Opened','Your garage has been opened late!',2)
 
-            else:
+            else: #Door open for >1 iteration
+                debug_print('Garage Door Still Open')
+
                 #Send Notify if over limit
                 currTime = now()
                 delta = currTime - garageDoorState
                 if delta.total_seconds() > NMA_DELAY_SEC and not garageNotified:
                     sendAndroidNotify('Garage Door Left Open','Garage Door has been left open!',1)
                     garageNotified = True
-        else:
-            garageNotified = False
+
+        else: #Door close state
             if not garageDoorState is None:
                 delta_time = readableDate(garageDoorState, now())
                 dbEvent('GarageDoor','Close ' + delta_time )
-                garageDoorState = None
-                print 'Garage Door Closed'
-    #Finish
+
+            garageDoorState = None
+            garageNotified = False
+
+    #End of Pin checks
         time.sleep(LOOP_DELAY)
     except KeyboardInterrupt:
-	QUIT = true
+	QUIT = True
 
+#Loop finished - clean up program
 dbEvent('DoorReader','Stopping')
 GPIO.cleanup()
 camera.close()
-############
-# END MAIN #
-############
+
