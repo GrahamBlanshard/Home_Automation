@@ -9,7 +9,7 @@ GaragePi
 ##Wiring Used:   
 [References using BCM Numbers](http://www.raspberrypi-spy.co.uk/wp-content/uploads/2012/06/Raspberry-Pi-GPIO-Layout-Model-B-Plus-rotated-2700x900-1024x341.png)
 ###Outputs
-17 - Garage Door Relay
+4 - Garage Door Relay
 
 ###Inputs
 24 - Man Door Sensor (Wired through Normally Open Contact)
