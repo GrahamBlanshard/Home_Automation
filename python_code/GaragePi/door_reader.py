@@ -17,6 +17,9 @@
 #               : Print update to help debugs
 ##
 
+###########
+# IMPORTS #
+###########
 import sqlite3
 import RPi.GPIO as GPIO
 import datetime
@@ -26,11 +29,9 @@ import pytz
 import pynma
 import os
 
-#########
-# SETUP #
-#########
-
-#Variable Setup
+#############
+# VARIABLES #
+#############
 #GPIO Pins
 MAN_DOOR_PIN = 24       #Purple Wire
 GARAGE_DOOR_PIN = 25    #Blue Wire
@@ -43,6 +44,13 @@ DEBUG_FILE = '/home/pi/garage/debug.pi'
 DB_PATH = '/home/pi/garage/db/garage.db'
 LOG_FILE = open('/home/pi/garage/logs/door_reader.log', 'w+')
 
+manDoorState = None     #None = closed, time = open
+garageDoorState = None  #None = closed, time = open
+savepicdir = './pics/'
+
+##########
+# CONFIG #
+##########
 #NotifyMyAndroid Setup
 NMA_API_KEY = "SuperTopSecret" #Your NMA API key goes here!
 manNotified = False
@@ -50,10 +58,7 @@ garageNotified = False
 NMA_DELAY_SEC = 300     #5 minutes
 NMA_LATE_START = 0      #Midnight	
 NMA_LATE_END = 5        #5AM
-
-manDoorState = None     #None = closed, time = open
-garageDoorState = None  #None = closed, time = open
-savepicdir = './pics/'
+nma = pynma.PyNMA(NMA_API_KEY)
 
 #RaspberryPi Setup
 GPIO.setwarnings(False)
@@ -68,9 +73,6 @@ camera.hflip = True
 camera.resolution = (1366,768)
 camera.quality = 100
 camera.exposure_mode = 'sports'
-
-#PyNMA Setup
-nma = pynma.PyNMA(NMA_API_KEY)
 
 #############
 # FUNCTIONS #
@@ -136,8 +138,8 @@ while not QUIT:
                     sendAndroidNotify('Man Door Opened','Your garage has been opened late!',2)
 
             else: #Door Open for >1 iteration
-                currTime = now()
-                debug_print('ManDoor still open')
+		currTime = now()
+		debug_print('ManDoor still open')
 
                 #Each iteration this door is open, take a picture
                 savedir = savepicdir + "%04d%02d%02d/" % (currTime.year, currTime.month, currTime.day)
@@ -145,7 +147,7 @@ while not QUIT:
                 makepicdir(savedir)
                 camera.capture(savefilename)
                 
-                #Send Notify Message if over time limit
+                #Send Notify MessageA if over time limit
                 delta = currTime - manDoorState
                 if delta.total_seconds() > NMA_DELAY_SEC and not manNotified:
                     sendAndroidNotify('Man Door Left Open','Man Door has been left open!',1)
