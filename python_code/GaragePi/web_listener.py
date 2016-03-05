@@ -103,7 +103,7 @@ def dbGarageDoorStatus():
     try:
         conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
-        curs.execute('SELECT name FROM events WHERE source=\'GarageDoor\' ORDER BY ID DESC LIMIT 1'
+        curs.execute('SELECT name FROM events WHERE source=\'GarageDoor\' ORDER BY ID DESC LIMIT 1')
         data = curs.fetchone()
         if data == None:
             return_data['result']  = 1
