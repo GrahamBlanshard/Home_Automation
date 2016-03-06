@@ -37,7 +37,7 @@ DOOR_CMD = "CmdGoesHere" #No External Access, Firewall blocked. Future placehold
 VALID_EVENTS = ['ManDoor','GarageDoor','WebListener','DoorReader','Graham','Steph']
 DEBUG_FILE = '/home/pi/garage/debug.pi'
 DB_PATH = '/home/pi/garage/db/garage.db'
-LOG_FILE = open('/home/pi/garage/logs/garage.log', 'w+')
+LOG_FILE = open('/home/pi/garage/logs/web_listener.log', 'w+')
 
 ##########
 # CONFIG #
@@ -56,7 +56,7 @@ GPIO.setup(RELAY_PIN, GPIO.OUT)
 def debug_print(msg):
     "Tests for Debug mode file and prints a message to LOG_FILE if present"
     if os.path.isfile(DEBUG_FILE):
-        LOG_FILE.write( msg + '\n' )
+        LOG_FILE.write('WebListener: ' + msg + '\n' )
         LOG_FILE.flush()
 
 def dbEvent(eSource, eName):
@@ -86,7 +86,7 @@ def dbSelect(eSource):
         data = curs.fetchone()
         if data == None:
             return_data['result'] = 1
-            return_data['data'] = 'No %s events to report' % eSource
+            return_data['data'] = 'No ' + eSource + ' events to report'
         else:
             return_data['result'] = 1
             return_data['data'] = data[0] + ' last state = `' + data[1] + '` at ' + data[2]
@@ -145,7 +145,7 @@ def door_signal(who):
 # FLASK FUNCIONS #
 ##################
 @app.route('/signal/<code>/<who>')
-def door_signal(code, who):
+def door_actuate(code, who):
     if code == DOOR_CMD:
         debug_print('Door Command from %s authenticated', who)
         door_signal(who) 
@@ -172,9 +172,11 @@ def query_status(source):
 def door_open(code,who):
     "Open the door from a Closed State"
     return_data = {'result': 0, 'data':'Invalid Request'}
+    print 'Open Started'
     if code == DOOR_CMD:
+        print 'Code valid'
         if dbGarageDoorStatus()['data'] == 'Closed':
-            debug_print('Door Open Command from %s authenticated' % who)
+            debug_print('Door Open Command from ' + who + ' authenticated')
             door_signal(who)
             return_data['result'] = 1
             return_data['data'] = 'Done'
