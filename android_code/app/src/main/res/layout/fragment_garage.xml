@@ -1,0 +1,29 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="prograham.homecontrol.GarageFragment"
+    android:id="@+id/garage_layout">
+
+    <TextView
+        android:layout_width="174dp"
+        android:layout_height="150dp"
+        android:text="ManDoorStatus"
+        android:id="@+id/mandoor_status"
+        android:layout_gravity="left|top" />
+
+    <TextView
+        android:layout_width="174dp"
+        android:layout_height="150dp"
+        android:text="GarageDoorStatus"
+        android:id="@+id/garagedoor_status"
+        android:layout_gravity="right|top" />
+
+    <Button
+        android:id="@+id/garage_move"
+        android:layout_width="300dp"
+        android:layout_height="200dp"
+        android:layout_gravity="center_horizontal|bottom"
+        android:text="@string/label_garage_close"/>
+
+</FrameLayout>

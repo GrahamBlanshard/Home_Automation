@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">HomeControl</string>
+    <!--Garage Fragment-->
+    <string name="label_garage_open">Open</string>
+    <string name="label_garage_close">Close</string>
+
+    <!--Menu Items-->
+    <string name="label_refresh">Refresh</string>
+    <string name="label_quit">Quit</string>
+</resources>
