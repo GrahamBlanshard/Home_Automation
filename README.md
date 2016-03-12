@@ -7,7 +7,7 @@ Code is written to function on a Raspberry Pi using standard features. Schematic
 
 Current Code:
 =====
-`python_code`
+`python_code/`
 
 RaspberryPi #1 : GaragePi - Car Door Automation, Man Door Security
 
@@ -15,6 +15,11 @@ RaspberryPi #1 : GaragePi - Car Door Automation, Man Door Security
 * Garage door control
 * Garage & Man door statuses logged to sqlite database
 * Can retrieve door statuses
+
+`android_code`
+
+* Garage Door Control
+* Garage Door Status Retreival
 
 Planned features:
 =====
@@ -24,10 +29,3 @@ Planned features:
 
 * Water level reading
 * High level alarm & notification
-
-`android_code`
-
-`GaragePi partner`
-
-* App to retrieve statuses of pi
-* Door commands through NFC and/or Android Wear
