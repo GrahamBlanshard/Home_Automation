@@ -1,10 +1,13 @@
 package prograham.homecontrol;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.speech.RecognizerIntent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,12 +26,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.List;
+
 public class GarageFragment extends Fragment {
     private MainActivity _parent;
     private Context _context;
     private SharedPreferences _sharedPrefs;
     private RequestQueue _requests;
     private boolean isOpen = false;
+    private final int SPEECH_REQUEST_CODE = 4027;
 
     public GarageFragment() {
         // Required empty public constructor
@@ -63,11 +69,23 @@ public class GarageFragment extends Fragment {
         super.onResume();
 
         Button garageButton = (Button)_parent.findViewById(R.id.garage_move);
+        Button voiceButton = (Button) _parent.findViewById(R.id.voice_button);
 
         garageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sendGarageCommand((isOpen ? "close" : "open"), true);
+            }
+        });
+
+        voiceButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+
+                startActivityForResult(intent, SPEECH_REQUEST_CODE);
             }
         });
 
@@ -176,5 +194,21 @@ public class GarageFragment extends Fragment {
         String time = jsonResponse.getString("time");
 
         return event + " @ " + time + " (" + String.valueOf(duration) + "sec)";
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SPEECH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            if (results.get(0).equals("open garage door")) {
+                sendGarageCommand("open",true);
+            } else if (results.get(0).equals("close garage door")) {
+                sendGarageCommand("close",true);
+            } else if (results.get(0).equals("refresh")) {
+                refresh();
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
