@@ -3,18 +3,14 @@
 # Checks the sensors for a door event. Logs it to the database
 ##
 # Pins in BCM config mode:
-# 24 = Man Door Sensor
-# 25 = Garage Door Sensor
+# 25 = Man Door Sensor
+# 24 = Garage Door Sensor
 ##
 # Sqlite3 DB created with db/setup.sh
 ##
 # Uses 
 #    pytz :  `sudo pip install pytz`
 #    pynma : (https://github.com/uskr/pynma)
-##
-# Latest Revision
-# Feb. 14, 2016 : Attempted loop fix
-#               : Print update to help debugs
 ##
 
 ###########
@@ -33,8 +29,8 @@ import os
 # VARIABLES #
 #############
 #GPIO Pins
-MAN_DOOR_PIN = 24       #Purple Wire
-GARAGE_DOOR_PIN = 25    #Blue Wire
+MAN_DOOR_PIN = 25       #Blue Wire
+GARAGE_DOOR_PIN = 24    #Purple Wire
 
 #Loop Control
 LOOP_DELAY = 1          #sec
@@ -68,8 +64,8 @@ GPIO.setup(GARAGE_DOOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 #Camera Setup
 camera = picamera.PiCamera()
-camera.vflip = True
-camera.hflip = True
+camera.vflip = False
+camera.hflip = False
 camera.resolution = (1366,768)
 camera.quality = 100
 camera.exposure_mode = 'sports'
@@ -87,25 +83,25 @@ def now():
     "Get current datetime with America/Regina timezone"
     return datetime.datetime.now(pytz.timezone('America/Regina'))
 
-def dbEvent(eSource, eName):
+def dbEvent(eSource, eName, eDuration):
     "Store an event in the database"
     try:
         conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
-        values = (eSource,eName)
-        curs.execute('INSERT INTO events (source,name) VALUES (?,?)', values)
+        values = (eSource,eName,eDuration)
+        curs.execute('INSERT INTO events (source,name,duration) VALUES (?,?,?)', values)
     except sqlite3.Error, e:
         LOG_FILE.write( 'Error on Insert: %s' % e.args[0] )
 
     conn.commit()
     conn.close()
-    debug_print('%s %s event stored in database' % (eSource, eName))
+    debug_print('%s %s %d event stored in database' % (eSource, eName, eDuration))
     return
 
-def readableDate(start,end):
-    "Returns a readable string of time"
+def totalSeconds(start,end):
+    "Returns a seconds between events"
     time_delta = end - start
-    return '{:.0f} seconds'.format(time_delta.total_seconds())
+    return int(time_delta.total_seconds())
 
 def makepicdir(savepath):
     "Tests and creates the picture directory"
@@ -123,14 +119,14 @@ def sendAndroidNotify(event,desc,priority):
 #######
 # RUN #
 #######
-dbEvent('DoorReader','Starting')
+dbEvent('DoorReader','Starting', 0)
 while not QUIT:
     debug_print('Loop Iteration')
     try:
     #Man Door - Pin Status
         if GPIO.input(MAN_DOOR_PIN): #Open Door
             if manDoorState is None:
-                dbEvent('ManDoor','Open')
+                dbEvent('ManDoor','Open', 0)
                 manDoorState = now()
             
                 #Test time, if its too late warn me with NMA!
@@ -155,15 +151,15 @@ while not QUIT:
 
         else: #Door close state
             if not manDoorState is None:
-                delta_time = readableDate(manDoorState, now())
-                dbEvent('ManDoor','Close ' + delta_time )
+                delta_time = totalSeconds(manDoorState, now())
+                dbEvent('ManDoor','Close', delta_time )
             manDoorState = None
             manNotified = False
             
     #Garage Door - Pin Status
         if GPIO.input(GARAGE_DOOR_PIN): #Door Open
             if garageDoorState is None:
-                dbEvent('GarageDoor','Open')	
+                dbEvent('GarageDoor','Open', 0)
                 garageDoorState = now() 
 
                 #Test time, if its too late warn me!
@@ -182,8 +178,8 @@ while not QUIT:
 
         else: #Door close state
             if not garageDoorState is None:
-                delta_time = readableDate(garageDoorState, now())
-                dbEvent('GarageDoor','Close ' + delta_time )
+                delta_time = totalSeconds(garageDoorState, now())
+                dbEvent('GarageDoor','Close', delta_time )
 
             garageDoorState = None
             garageNotified = False
@@ -194,7 +190,7 @@ while not QUIT:
 	QUIT = True
 
 #Loop finished - clean up program
-dbEvent('DoorReader','Stopping')
+dbEvent('DoorReader','Stopping',0)
 GPIO.cleanup()
 camera.close()
 

@@ -7,15 +7,6 @@
 ##
 # Sqlite3 DB created with db/setup.sh
 ##
-# Latest Revision
-# - Feb. 25 - Debug updates
-# - Mar.  3 - Json responses in prep for Mobile App
-#           - Open/Close functionality instead of direct signal
-##
-# JSON Format
-# result : int    - 0 or 1 for failure/success
-# data   : string - readable data responses
-##
 
 ###########
 # IMPORTS #
@@ -56,68 +47,71 @@ GPIO.setup(RELAY_PIN, GPIO.OUT)
 def debug_print(msg):
     "Tests for Debug mode file and prints a message to LOG_FILE if present"
     if os.path.isfile(DEBUG_FILE):
-        LOG_FILE.write('WebListener: ' + msg + '\n' )
+        LOG_FILE.write(msg + '\n' )
         LOG_FILE.flush()
 
-def dbEvent(eSource, eName):
+def dbEvent(eSource, eName, eDuration):
     "Store an event in the database"
     try:
         conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
 
-        values = (eSource,eName)
-        curs.execute('INSERT INTO events (source,name) VALUES (?,?)', values)
+        values = (eSource,eName,eDuration)
+        curs.execute('INSERT INTO events (source,name,duration) VALUES (?,?,?)', values)
     except sqlite3.Error, e:
         LOG_FILE.write( 'Error on Insert: %s' % e.args[0] )
     
     conn.commit()
     conn.close()
-    debug_print('%s %s event stored in database.' % (eSource,eName))
+    debug_print('%s %s %d event stored in database.' % (eSource,eName,eDuration))
     return
 
 def dbSelect(eSource):
     "Execute SELECT statement on database given source name"
-    return_data = {'result': 0, 'data': "Error on dbSelect"}
+    return_data = {'source': eSource}
     try:
         conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
 
-        curs.execute('SELECT source,name,etime FROM events WHERE source=\'%s\' ORDER BY ID DESC LIMIT 1' % eSource)
+        curs.execute('SELECT name,duration,etime FROM events WHERE source=\'%s\' ORDER BY ID DESC LIMIT 1' % eSource)
         data = curs.fetchone()
         if data == None:
-            return_data['result'] = 1
-            return_data['data'] = 'No ' + eSource + ' events to report'
+            return_data['result'] = 0
+            return_data['event'] = 'none'
         else:
-            return_data['result'] = 1
-            return_data['data'] = data[0] + ' last state = `' + data[1] + '` at ' + data[2]
+            return_data['result'] = 0
+            return_data['event'] = data[0]
+            return_data['duration'] = data[1]
+            return_data['time'] = data[2]
     except sqlite3.Error, e:
         LOG_FILE.write( 'Error on dbSelect %s:' % e.args[0] )
-        return_data['data'] = 'Error %s:' % e.args[0]
+        return_data['result'] = 1
+        return_data['source'] = 'dbSelect'
+        return_data['error'] = e.args[0]
         
     conn.close()
     return return_data
     
 def dbGarageDoorStatus():
     "Get the last door status event from the database"
-    return_data = {'result': 0, 'data': 'Error querying door status'}
+    return_data = {'source': 'GarageDoor'}
     try:
         conn=sqlite3.connect(DB_PATH)
         curs=conn.cursor()
         curs.execute('SELECT name FROM events WHERE source=\'GarageDoor\' ORDER BY ID DESC LIMIT 1')
         data = curs.fetchone()
         if data == None:
-            return_data['result']  = 1
-            return_data['data'] = 'No Door Status to Return'
+            return_data['result'] = 0
+            return_data['event'] = 'none'
         else:
-            return_data['result'] = 1
-            if 'Open' in data[0]:
-                return_data['data'] = 'Open'
-            else:
-                return_data['data'] = 'Closed'
+            return_data['result'] = 0
+            return_data['event'] = data[0] 
         
     except sqlite3.Error, e:
         LOG_FILE.write( 'Error on GarageDoorStatus Query: %s' % e.args[0] )
-        return_data['data'] = 'Error on GarageDoorStatus Query: %s' % e.args[0]
+        return_data['result'] = 1
+        return_data['source'] = 'dbGarageDoorStatus'
+        return_data['error'] = e.args[0]
         
     conn.close()
     return return_data
@@ -125,17 +119,15 @@ def dbGarageDoorStatus():
 def door_status():
     "Retrieve statuses for both doors"
     try:
-        statuses = json.dumps(dbSelect('ManDoor')) 
-        statuses += '<br />'
-        statuses += json.dumps(dbSelect('GarageDoor'))
-        return statuses
+        statuses = {'items': [dbSelect('ManDoor'),dbSelect('GarageDoor')] }
+        return json.dumps(statuses)
     except sqlite3.Error, e:
         LOG_FILE.write('Error %s:' % e.args[0])
         return 'Error %s:' % e.args[0]
 		
 def door_signal(who):
     "Activate Relay for 500ms, log event"
-    dbEvent(who,'Door Signal')
+    dbEvent(who,'Door Signal',0)
     GPIO.output(RELAY_PIN,GPIO.LOW)
     sleep(0.5)
     GPIO.output(RELAY_PIN,GPIO.HIGH)
@@ -147,12 +139,12 @@ def door_signal(who):
 @app.route('/signal/<code>/<who>')
 def door_actuate(code, who):
     if code == DOOR_CMD:
-        debug_print('Door Command from %s authenticated', who)
+        debug_print('Door Command from ' + who + ' authenticated')
         door_signal(who) 
         return 'Done'
     else:
-        LOG_FILE.write('Door Command from %s failed', who)
-        return json.dumps({'result': 0, 'data': 'Err: Invalid code'}), status.HTTP_401_UNAUTHORIZED
+        LOG_FILE.write('Door Command from ' + who + ' failed')
+        return json.dumps({'result': 1, 'error': 'Invalid code', 'source': 'signal'}), status.HTTP_401_UNAUTHORIZED
 
 @app.route('/status')
 def status_plain():
@@ -162,62 +154,60 @@ def status_plain():
 @app.route('/query/<source>')
 def query_status(source):
     "Query the database for the latest event on given source"
-    debug_print('Query for %s' % status)
+    debug_print('Query for ' + status)
     if source in VALID_EVENTS:
         return dbSelect(source) 
     else:
-        return json.dumps({'result': 0, 'data': 'Invalid Event Request'}), status.HTTP_406_NOT_ACCEPTABLE
+        return json.dumps({'result': 1, 'error': 'Invalid Event Request', 'source': 'query'}), status.HTTP_406_NOT_ACCEPTABLE
         
 @app.route('/open/<code>/<who>')
 def door_open(code,who):
     "Open the door from a Closed State"
-    return_data = {'result': 0, 'data':'Invalid Request'}
-    print 'Open Started'
+    return_data = {'source': 'Open'}
     if code == DOOR_CMD:
-        print 'Code valid'
-        if dbGarageDoorStatus()['data'] == 'Closed':
+        if dbGarageDoorStatus()['event'] == 'Close':
             debug_print('Door Open Command from ' + who + ' authenticated')
             door_signal(who)
-            return_data['result'] = 1
-            return_data['data'] = 'Done'
-            return json.dumps(return_data)
+            return_data['result'] = 0
+            return_data['event'] = 'Done'
         else:
-            debug_print('Door Open Command from %s authenticated. But door is open' % who)
-            return_data['data'] = 'Door is already Open'
-            return json.dumps(return_data), status.HTTP_406_NOT_ACCEPTABLE
+            debug_print('Door Open Command from ' + who + ' authenticated. But door is open')
+            return_data['event'] = 'Door is already Open'
+            return_data['result'] = 0
     else:
-        LOG_FILE.write('Door Open Command from %s failed', who)
-        return_data['data'] = 'Err: Invalid Code'
-        return json.dumps(return_data), status.HTTP_401_UNAUTHORIZED
+        LOG_FILE.write('Door Open Command from ' + who + ' failed')
+        return_data['result'] = 1
+        return_data['error'] = 'Invalid Auth Code'
+    return json.dumps(return_data)
 
 @app.route('/close/<code>/<who>')
 def door_close(code,who):
     "Close the door from an Open State"
-    return_data = {'result': 0, 'data':'Invalid Request'}
+    return_data = {'source': 'Close'}
     if code == DOOR_CMD:
-        if dbGarageDoorStatus()['data'] == 'Open':
-            debug_print('Door Close Command from %s authenticated' % who)
+        if dbGarageDoorStatus()['event'] == 'Open':
+            debug_print('Door Close Command from ' + who + ' authenticated')
             door_signal(who)
-            return_data['result'] = 1
-            return_data['data'] = 'Done'
-            return json.dumps(return_data)
+            return_data['result'] = 0
+            return_data['event'] = 'Done'
         else:
-            debug_print('Door Close Command from %s authenticated. But door is closed' % who)
-            return_data['data'] = 'Door is already Closed'
-            return json.dumps(return_data), status.HTTP_406_NOT_ACCEPTABLE
+            debug_print('Door Close Command from ' + who + ' authenticated. But door is closed')
+            return_data['result'] = 0
+            return_data['event'] = 'Door is already Closed'
     else:
-        LOG_FILE.write('Door Closed Command from %s failed', who)
-        return_data['data']  = 'Err: Invalid Code'
-        return json.dumps(return_data), status.HTTP_401_UNAUTHORIZED
+        LOG_FILE.write('Door Closed Command from ' + who + ' failed')
+        return_data['result'] = 1
+        return_data['error'] = 'Invalid Code'
+    return json.dumps(return_data)
         
 ########
 # MAIN #
 ########
 if __name__ == '__main__':
-    dbEvent('WebListener','Starting')
+    dbEvent('WebListener','Starting',0)
     app.run(host="0.0.0.0")
 
     #Running now
 
-    dbEvent('WebListener','Stopping')
+    dbEvent('WebListener','Stopping',0)
     GPIO.cleanup()
