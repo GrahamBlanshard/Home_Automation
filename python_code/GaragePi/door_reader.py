@@ -42,7 +42,7 @@ LOG_FILE = open('/home/pi/garage/logs/door_reader.log', 'w+')
 
 manDoorState = None     #None = closed, time = open
 garageDoorState = None  #None = closed, time = open
-savepicdir = './pics/'
+savepicdir = '/home/pi/garage/pics/'
 
 ##########
 # CONFIG #
