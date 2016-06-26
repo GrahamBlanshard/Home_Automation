@@ -29,6 +29,8 @@ VALID_EVENTS = ['ManDoor','GarageDoor','WebListener','DoorReader','Graham','Step
 DEBUG_FILE = '/home/pi/garage/debug.pi'
 DB_PATH = '/home/pi/garage/db/garage.db'
 LOG_FILE = open('/home/pi/garage/logs/web_listener.log', 'w+')
+PIC_FILE = '/home/pi/garage/pic_req.pi'
+PAUSE_FILE = '/home/pi/garage/pic_pause.pi'
 
 ##########
 # CONFIG #
@@ -199,6 +201,27 @@ def door_close(code,who):
         return_data['result'] = 1
         return_data['error'] = 'Invalid Code'
     return json.dumps(return_data)
+
+@app.route('/pic')
+def take_picture():
+    "Instruct the pi to capture a picture"
+    return_data = {'source': 'Picture Request', 'event':'Done', 'result': 0}
+    open(PIC_FILE,'a').close()
+    return json.dumps(return_data)
+
+@app.route('/pause')
+def toggle_pause():
+    "Toggle picture pausing"
+    return_data = {'source': 'Pause Toggle', 'event': 'Done', 'result': 0}
+    if os.path.isfile(PAUSE_FILE):
+        os.remove(PAUSE_FILE)
+        return_data['event'] = 'Off'
+    else:
+        open(PAUSE_FILE,'a').close()
+        return_data['event'] = 'On'
+
+    return json.dumps(return_data)
+
         
 ########
 # MAIN #

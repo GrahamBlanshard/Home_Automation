@@ -39,6 +39,8 @@ QUIT = False
 DEBUG_FILE = '/home/pi/garage/debug.pi'
 DB_PATH = '/home/pi/garage/db/garage.db'
 LOG_FILE = open('/home/pi/garage/logs/door_reader.log', 'w+')
+PIC_FILE = '/home/pi/garage/pic_req.pi'
+PAUSE_FILE = '/home/pi/garage/pic_pause.pi'
 
 manDoorState = None     #None = closed, time = open
 garageDoorState = None  #None = closed, time = open
@@ -115,7 +117,16 @@ def sendAndroidNotify(event,desc,priority):
     "Send a message to Android"
     nma.push("GaragePi", event, desc, "http://172.16.1.76:5000/status",priority) #172.16.1.76 is statically assigned on my network
     return
-	
+
+def capture_photo(currTime):
+    "Capture a picture to the storage directory when not in pause mode"
+    if Not os.path.isfile(PAUSE_FILE):
+      savedir = savepicdir + "%04d%02d%02d/" % (currTime.year, currTime.month, currTime.day)
+      savefilename = savedir + 'garage-' + "%02d%02d%02d.jpg" % (currTime.hour, currTime.minute, currTime.second)
+      makepicdir(savedir)
+      camera.capture(savefilename)
+    return
+
 #######
 # RUN #
 #######
@@ -138,10 +149,7 @@ while not QUIT:
 		debug_print('ManDoor still open')
 
                 #Each iteration this door is open, take a picture
-                savedir = savepicdir + "%04d%02d%02d/" % (currTime.year, currTime.month, currTime.day)
-                savefilename = savedir + 'garage-' + "%02d%02d%02d.jpg" % (currTime.hour, currTime.minute, currTime.second)
-                makepicdir(savedir)
-                camera.capture(savefilename)
+                capture_photo(currTime) 
                 
                 #Send Notify MessageA if over time limit
                 delta = currTime - manDoorState
@@ -185,6 +193,12 @@ while not QUIT:
             garageNotified = False
 
     #End of Pin checks
+    #Check for Picture Request
+        if os.path.isfile(PIC_FILE):
+            debug_print("Photo Request Received")
+            capture_photo(now())
+            os.remove(PIC_FILE)
+            
         time.sleep(LOOP_DELAY)
     except KeyboardInterrupt:
 	QUIT = True
